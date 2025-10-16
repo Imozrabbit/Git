@@ -7,7 +7,7 @@
 #define ENTREE "Lorem_Ipsum.txt"
 #define SORTIE "lzw"
 
-int main(void)
+int main()
 {
 
 }
