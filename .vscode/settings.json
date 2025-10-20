@@ -6,5 +6,6 @@
         "string.h": "c",
         "stdlib.h": "c",
         "lzw.h": "c"
-    }
+    },
+    "C_Cpp.errorSquiggles": "disabled"
 }
