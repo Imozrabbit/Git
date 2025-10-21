@@ -5,7 +5,7 @@ lzw : lzw.o
 
 #-c = compile only, turns .c to .o, need to add all depenencies in there
 lzw.o : lzw.c lzw.h
-	gcc -ansi -Wall -finput-charset=UTF-8 -fexec-charset=UTF-8 -c lzw.c
+	gcc -ansi -Wall -c lzw.c
 
 #delete all .o files and the executable file
 clean :
