@@ -4,28 +4,22 @@
 #include <ctype.h>
 #include "lzw.h"
 
-int main(int argc, string argv[])
-{
+int main(int argc, string argv[]){
 /*Variables*/
 int i;
 int j;
-int k;
-int k_min = 0;
 int n;
 int int_reponse;
 int code_ASCII;
 int fenetre_count;
-int prev;
-int curr;
 int counter;
 int max;
-int min;
 int fenetre[2];
-int dico_nb[128][1];
 unsigned int count[128][128];
 char input_filename[256];
 char output_filename[256];
 char dictionnaire_filename[256];
+int dico_nb[128][1];
 char dico[128][2];
 Reponse reponse;
 string extension_output;
@@ -52,7 +46,7 @@ if ((argc==1) || (argc>3)){
 strcpy(input_filename, argv[1]);
 
 /*Mémoriser le deuxième paramètre*/
-if (argc == 2){
+if(argc == 2){
     /*S'il n'exist pas un deuxième paramètre, on prend le nom du premier paramètre*/
     strcpy(output_filename, argv[1]);
     extension_output = strrchr(output_filename, '.');
@@ -160,55 +154,49 @@ while ((counter = fgetc(input_file)) != EOF){
 }
 count[fenetre[0]][fenetre[1]]++;
 
-/*Façon efficace, fgetc donne un bit chaque il est appelé
-if ((prev = fgetc(input_file)) != EOF){
-    while ((curr = fgetc(input_file)) != EOF){
-        count[prev][curr]++;
-        prev = curr;
-    }
-}*/
+
+/*Enregistrer les top 128 couplets les plus utilisés*/
+for (i=0;i<128;i++){ /*initialiser la tableau*/
+    dico[i][0] = dico[i][1] = dico_nb[i][0] = 0;
+}
 
 /*Récupérer le max des couplets*/
+rewind(input_file);
 max = 0;
+int nb_colonne;
+int nb_ligne;
 for (i=0;i<128;i++){
     for (j=0;j<128;j++){
         if (count[i][j]>max){
             max = count[i][j];
+            count[i][j] = 0;
+            dico[0][0] = (char)i;
+            dico[0][1] = (char)j;
+            dico_nb[0][0] = max;
+            nb_ligne = i;
+            nb_colonne = j;
         }
     }
 }
 
-/*Enregistrer les top 128 couplets les plus utilisés*/
-rewind(input_file);
-for (i=0;i<128;i++){ /*initialiser la tableau*/
-    dico[i][0] = dico[i][1] = dico_nb[i][0] = 0;
-}
-n = 0;
-for (i=0;i<128;i++){
-    for (j=0;j<128;j++){
-        if (n < 128){
-            /*List dico pas rempli*/
-            dico_nb[n][0] = count[i][j];
-            dico[n][0] = (char)i;
-            dico[n][1] = (char)j;
-            n++;
-        }
-        else{
-            /*List déjà remplit, on remplace le minimum.*/
-            min = dico_nb[0][0];
-            for (k=1;k<128;k++){ /*Trouver le min*/
-                    if (dico_nb[k][0]<min){
-                        min = dico_nb[k][0];
-                        k_min = k;
-                    }
-                }
-            if (count[i][j] > min){
-                dico_nb[k_min][0] = count[i][j];
-                dico[k_min][0] = (char)i;
-                dico[k_min][1] = (char)j;
+unsigned int k;
+int index;
+for (index = 1;index < 128;index++){
+    int sec = 0;
+    for (i=0;i<128;i++){
+        for (j=0;j<128;j++){
+            k = count[i][j];
+            if ((k < max)&&(k > sec)){
+                sec = k;
+                nb_ligne = i;
+                nb_colonne = j;
             }
         }
     }
+    dico_nb[index][0] = sec;
+    max = sec;
+    dico[index][0] = (char)nb_ligne;
+    dico[index][1] = (char)nb_colonne;
 }
 
 /*Exporter les données vers la dictionnaire*/
@@ -218,6 +206,28 @@ for (n=0;n<128;n++){
             iscntrl(dico[n][1])?'w':dico[n][1],
             dico_nb[n][0]);
 }
+
+/*Generation de nom du fichier d'orgine*/
+char *original_filename = "pico\0";
+
+
+#if 0
+for (n=0;n<128;n++){
+    fprintf(dico,"\"%c%c\"\n", 
+            iscntrl(dico[n][0])?' ':dico[n][0], 
+            iscntrl(dico[n][2])?'w':dico[n][1]);
+}
+
+/**/
+int prev;
+int curr;
+if ((prev = fgetc(input_file)) != EOF){
+    while ((curr = fgetc(input_file)) != EOF){
+        count[prev][curr]++;
+        prev = curr;
+    }
+}
+#endif
 
 /*Fin de programme*/
 fclose(input_file);

@@ -11,3 +11,5 @@ lzw.o : lzw.c lzw.h
 clean :
 	rm -f *.o
 	rm -f lzw
+	rm -f test*
+	rm -f tes*
