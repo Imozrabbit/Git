@@ -156,18 +156,17 @@ while ((counter = fgetc(input_file)) != EOF){
         count[fenetre[0]][fenetre[1]]++;
         fenetre[0] = fenetre[1];
         fenetre[1] = counter;
-        count[fenetre[0]][fenetre[1]]++;
-        fenetre[0] = fenetre[1];
-        fenetre_count = 1;
     }
 }
-/*Façon efficace, fgetc donne un bit chaque il est appelé*/
+count[fenetre[0]][fenetre[1]]++;
+
+/*Façon efficace, fgetc donne un bit chaque il est appelé
 if ((prev = fgetc(input_file)) != EOF){
     while ((curr = fgetc(input_file)) != EOF){
         count[prev][curr]++;
         prev = curr;
     }
-}
+}*/
 
 /*Récupérer le max des couplets*/
 max = 0;
