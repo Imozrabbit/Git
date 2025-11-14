@@ -210,7 +210,6 @@ for (n=0;n<128;n++){
 /*Generation de nom du fichier d'orgine*/
 char *original_filename = "pico\0";
 
-
 #if 0
 for (n=0;n<128;n++){
     fprintf(dico,"\"%c%c\"\n", 
