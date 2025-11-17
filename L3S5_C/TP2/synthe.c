@@ -1,4 +1,3 @@
-#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -93,14 +92,17 @@ int generateADSR(
 
     unsigned int i;
     for (i=0 ; i<env_ADSR->nbrSamples ; i++){
+        double t = i/(double)smplRate;
         /* During attack */
         if (i<i_a) {
-            env_ADSR->data[i] = (attack_amplitude * i) / (i_a - 1.0);
+            /*env_ADSR->data[i] = (attack_amplitude * i) / (i_a - 1.0);*/
+            env_ADSR->data[i] = attack_amplitude * (t/attack_duration);
         }
 
         /* During decay */
         else if ( (i >= i_a) && (i < (i_a + i_d)) ) {
-            env_ADSR->data[i] = attack_amplitude + (1.0 - attack_amplitude) * (i - i_a) / (i_d - 1.0);
+            /*env_ADSR->data[i] = attack_amplitude + (1.0 - attack_amplitude) * (i - i_a) / (i_d - 1.0);*/
+            env_ADSR->data[i] = attack_amplitude + (1 - attack_amplitude) * (t - attack_duration)/decay_duration;
         }
 
         /* During sustain */
@@ -110,7 +112,8 @@ int generateADSR(
 
         /* During release */
         else{
-            env_ADSR->data[i] = 1.0 * (1 - (i - i_a - i_d - i_s)/(i_r - 1.0) );
+            /*env_ADSR->data[i] = 1.0 * (1 - (i - i_a - i_d - i_s)/(i_r - 1.0) );*/
+            env_ADSR->data[i] = 1.0 - (t - (attack_duration + decay_duration + sustain_duration))/release_duration;
         }
     }
 
@@ -120,12 +123,13 @@ int generateADSR(
 
 /* ------------------------------------------------------------ */
 int free_memory(
-        double *data,
-        unsigned int nbrSamples
+    pcmSignal *s
         )
 {
-    free(data);
-    nbrSamples = 0;
+    free(s->data);
+    s->data = NULL;
+    s->nbrSamples = 0;
+    s->samplingRate = 0;
     return (SYNTHE_SUCCESS);
 }
 
@@ -153,6 +157,13 @@ int multiply_2signal(
 {
     unsigned int i;
 
+    /* Verify if sampling frequency is the same for s_1 and s_2 */
+    if (s_1->samplingRate != s_2->samplingRate){
+        printf("Not the same sampling rate for the 2 signals.\n");
+        return (SYNTHE_FAILURE);
+    }
+    s_final->samplingRate = s_1->samplingRate;
+
     /* pick the least nomber of samples between the 2 signals as the final sample number */
     if (s_1->nbrSamples > s_2->nbrSamples){
        s_final->nbrSamples = s_2->nbrSamples;
@@ -161,11 +172,65 @@ int multiply_2signal(
        s_final->nbrSamples = s_1->nbrSamples;
     }
 
+    /* Allocate the memory for s_final.data*/
+    s_final->data = (double*) malloc(sizeof(double) * s_final->nbrSamples);
+    if (s_final == NULL){
+        fprintf(stderr, ERROR_NOT_ENOUGH_MEMORY);
+        return (SYNTHE_FAILURE);
+    }
+
     /* do the multiplication of 2 signals */
     for (i=0; i<s_final->nbrSamples; i++){
         s_final->data[i] = s_1->data[i] * s_2->data[i];
     }
     
+    return (SYNTHE_SUCCESS);
+}
+
+
+/* ------------------------------------------------------------ */
+int somme(
+        pcmSignal *s_final,
+        pcmSignal *s_1,
+        pcmSignal *s_2
+        )
+{
+    unsigned int nbrSamples_smaller;
+    pcmSignal *s_bigger;
+
+    if (s_1->samplingRate != s_2->samplingRate){
+        printf("The 2 signals don't have the same sampling rate.");
+        return (SYNTHE_FAILURE);
+    }
+    s_final->samplingRate = s_1->samplingRate;
+
+    if (s_1->nbrSamples > s_2->nbrSamples){
+        s_final->nbrSamples = s_1->nbrSamples;
+        nbrSamples_smaller = s_2->nbrSamples;
+        s_bigger = s_1;
+    }
+    else{
+        s_final->nbrSamples = s_2->nbrSamples;
+        nbrSamples_smaller = s_1->nbrSamples;
+         s_bigger = s_2;
+    }
+
+    s_final->data = (double*)malloc(sizeof(double)*s_final->nbrSamples);
+    if (s_final->data == NULL){
+        fprintf(stderr, ERROR_NOT_ENOUGH_MEMORY);
+        return (SYNTHE_FAILURE);
+    }
+
+    unsigned int i;
+    for (i=0; i<s_final->nbrSamples;i++){
+        if (i<nbrSamples_smaller){
+            s_final->data[i] = s_1->data[i] + s_2->data[i];
+        }
+        else{
+            s_final->data[i] = s_bigger->data[i];
+        }
+    }
+
     return (SYNTHE_SUCCESS);
 }
 
@@ -179,25 +244,26 @@ int diaposon(
         double gain
         )
 {
-    pcmSignal *env_exp;
-    generateExp(env_exp, smplRate, 1.0);
+    pcmSignal env_exp;
+    generateExp(&env_exp, smplRate, tau);
 
-    pcmSignal *sinus;
+    pcmSignal sinus;
     double duration = 15 * tau * log(2);
-    generateSinus(sinus, smplRate, duration, 440.0, 0.0);
+    generateSinus(&sinus, smplRate, duration, frequency, 0.0);
 
-    amp(sinus, 29000.0);
+    amp(&sinus, gain);
 
-    pcmSignal *final_signal;
-    multiply_2signal(final_signal, sinus, env_exp);
+    pcmSignal final_signal;
+    multiply_2signal(&final_signal, &sinus, &env_exp);
 
-    pcmSignal *env_ADSR;
-    generateADSR(env_ADSR, smplRate, 0.02, 1.1, 0.01, 1.0, 0.1);
-    multiply_2signal(final_signal_realistic, final_signal, env_ADSR);
+    pcmSignal env_ADSR;
+    generateADSR(&env_ADSR, smplRate, 0.02, 1.1, 0.01, 1.0, 0.1);
+    multiply_2signal(final_signal_realistic, &final_signal, &env_ADSR);
 
-    free_memory(env_exp->data, env_exp->nbrSamples);
-    free_memory(sinus->data, sinus->nbrSamples);
-    free_memory(final_signal->data, final_signal->nbrSamples);
+    free_memory(&env_exp);
+    free_memory(&sinus);
+    free_memory(&final_signal);
+    free_memory(&env_ADSR);
 
     return (SYNTHE_SUCCESS);
 }

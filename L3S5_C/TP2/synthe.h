@@ -37,8 +37,7 @@ int generateADSR(
         );
 
 int free_memory(
-        double *data,
-        unsigned int nbrSamples
+        pcmSignal *s
         );
 
 int amp(
@@ -47,6 +46,12 @@ int amp(
        );
 
 int multiply_2signal(
+        pcmSignal *s_final,
+        pcmSignal *s_1,
+        pcmSignal *s_2
+        );
+
+int somme(
         pcmSignal *s_final,
         pcmSignal *s_1,
         pcmSignal *s_2
