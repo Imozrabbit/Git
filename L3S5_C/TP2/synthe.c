@@ -19,7 +19,7 @@ const double PI = 3.14159265359;
 
 signal->nbrSamples = (unsigned int) ceil(duration*smplRate+1);
 signal->samplingRate = smplRate;
-signal->data = (double*)malloc(sizeof(double)*(signal->nbrSamples));/*  WARN: need to understand what is (double*) doing here  */
+signal->data = (double*)malloc(sizeof(double)*(signal->nbrSamples));
 
 /* Verify if have enough memory */
 if (signal->data == NULL)
@@ -159,7 +159,7 @@ int multiply_2signal(
 
     /* Verify if sampling frequency is the same for s_1 and s_2 */
     if (s_1->samplingRate != s_2->samplingRate){
-        printf("Not the same sampling rate for the 2 signals.\n");
+        fprintf(stderr, "Not the same sampling rate for the 2 signals.\n");
         return (SYNTHE_FAILURE);
     }
     s_final->samplingRate = s_1->samplingRate;
@@ -174,7 +174,7 @@ int multiply_2signal(
 
     /* Allocate the memory for s_final.data*/
     s_final->data = (double*) malloc(sizeof(double) * s_final->nbrSamples);
-    if (s_final == NULL){
+    if (s_final->data == NULL){
         fprintf(stderr, ERROR_NOT_ENOUGH_MEMORY);
         return (SYNTHE_FAILURE);
     }
@@ -236,7 +236,7 @@ int somme(
 
 
 /* ------------------------------------------------------------ */
-int diaposon(
+int diapason(
         pcmSignal *final_signal_realistic,
         unsigned int smplRate,
         double tau,
@@ -265,5 +265,115 @@ int diaposon(
     free_memory(&final_signal);
     free_memory(&env_ADSR);
 
+    return (SYNTHE_SUCCESS);
+}
+
+
+
+/* ------------------------------------------------------------ */
+int piano(
+    pcmSignal *piano,
+    unsigned int samplingRate,
+    double fond_freq,
+    double gain
+)
+{
+    pcmSignal harmonic_1;
+    pcmSignal harmonic_1_exp;
+    pcmSignal note_1;
+    pcmSignal harmonic_2;
+    pcmSignal harmonic_2_exp;
+    pcmSignal note_2; 
+    pcmSignal harmonic_3;
+    pcmSignal harmonic_3_exp;
+    pcmSignal note_3;
+
+    generateSinus(&harmonic_1, samplingRate, 1.0, fond_freq, 0.0);
+    generateExp(&harmonic_1_exp, samplingRate, 1.0);
+    multiply_2signal(&note_1, &harmonic_1, &harmonic_1_exp);
+
+    generateSinus(&harmonic_2, samplingRate, 1.0, fond_freq*2.0, 0.0);
+    generateExp(&harmonic_2_exp, samplingRate, 0.7);
+    multiply_2signal(&note_2, &harmonic_2, &harmonic_2_exp);
+
+    generateSinus(&harmonic_3, samplingRate, 1.0, fond_freq*3.0, 0.0);
+    generateExp(&harmonic_3_exp, samplingRate, 0.3);
+    multiply_2signal(&note_3, &harmonic_3, &harmonic_3_exp);
+
+    pcmSignal sum;
+    somme(&sum, &note_1, &note_2);
+    somme(&sum, &sum, &note_3);
+
+    pcmSignal adsr;
+    generateADSR(&adsr, samplingRate, 0.02, 1.1, 0.01, 1.0, 0.1);
+
+    multiply_2signal(piano, &adsr, &sum);
+    amp(piano, gain);
+
+    free_memory(&harmonic_1);
+    free_memory(&harmonic_1_exp);
+    free_memory(&note_1);
+    free_memory(&harmonic_2);
+    free_memory(&harmonic_2_exp);
+    free_memory(&note_2);
+    free_memory(&harmonic_3);
+    free_memory(&harmonic_3_exp);
+    free_memory(&note_3);
+    free_memory(&sum);
+    free_memory(&adsr);
+
+    return (SYNTHE_SUCCESS);
+}
+
+
+/* ------------------------------------------------------------ */
+int addsignal(
+        pcmSignal *dest,
+        pcmSignal *src,
+        double decalage
+        )
+{
+    unsigned int i;
+    if (dest->data == NULL){
+        dest->nbrSamples = src->nbrSamples;
+        /* create new memory block for data points */
+        dest->data = (double*)malloc(sizeof(double)*dest->nbrSamples); 
+        if (dest->data == NULL){
+            fprintf(stderr, ERROR_NOT_ENOUGH_MEMORY);
+            return (SYNTHE_FAILURE);
+        }
+        /* import source data into destination */
+        for (i=0; i<dest->nbrSamples; i++){
+            dest->data[i] = src->data[i];
+        }
+    }
+    else
+    {
+        /* calculate the new memory block size considering the delay too */
+        unsigned int pause_nbrSamples = (unsigned int)decalage * src->samplingRate;
+        unsigned int new_nbrSamples = dest->nbrSamples + src->nbrSamples + pause_nbrSamples;
+        /* make the memory block bigger and verify if sucess */
+        dest->data = (double*)realloc(dest->data, sizeof(double)*new_nbrSamples);
+        if (dest->data == NULL){
+            fprintf(stderr, ERROR_NOT_ENOUGH_MEMORY);
+            return (SYNTHE_FAILURE);
+        }
+        /* add the pause */
+        for (i=0; i<pause_nbrSamples; i++){
+            dest->data[i+dest->nbrSamples] = 0.0;
+        }
+        /* NOTE: This is how to move the pointer to the beginning of the added block after the pause
+                        - double *pdata = dest->data;
+                        - pdata += (dest->nbrSamples + pause_nbrSamples);
+                        - dest->nbrSamples = new_nbrSamples;
+
+        But it is not needed here*/
+
+        /* write the src data after this */
+        for (i=0; i<src->nbrSamples; i++){
+            dest->data[i + dest->nbrSamples + pause_nbrSamples] = src->data[i];
+        }
+        dest->nbrSamples = new_nbrSamples;
+    }
     return (SYNTHE_SUCCESS);
 }

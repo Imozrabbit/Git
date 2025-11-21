@@ -1,17 +1,18 @@
+#include <unistd.h>
 #include <stdio.h>
 #include "synthe.h"
 #include <stdlib.h>
+#include <math.h>
 #include "msg.h"
 #include "save.h"
 
 int main(int argc, char *argv[])
 {
-    /* variable */
-    pcmSignal mySinus;
-    pcmSignal env_exp; /* Enveloppe exponentielle pour le signal */
-
+    /* pcmSignal mySinus;
     generateSinus(&mySinus, 44100,0.2,220,0);
     csvSaveSignal("la.csv", mySinus);
+
+    pcmSignal env_exp;
     generateExp(&env_exp, mySinus.samplingRate, 0.5);
     csvSaveSignal("exp.csv", env_exp);
 
@@ -20,11 +21,28 @@ int main(int argc, char *argv[])
 
     pcmSignal multiplied_of_2;
     multiply_2signal(&multiplied_of_2, &mySinus, &env_exp);
-    csvSaveSignal("multiplied_of_2", multiplied_of_2);
+    csvSaveSignal("multiplied_of_2.csv", multiplied_of_2);
 
-    pcmSignal final_signal_diapason;
-    diaposon(&final_signal_diapason, 44100, 1.0, 440.0, 29000.0);
-    csvSaveSignal("final.csv", final_signal_diapason);
+    pcmSignal diapason;
+    diapason(&diapason, 44100, 1.0, 440.0, 29000.0);
+    csvSaveSignal("diapason.csv", diapason); 
+    wavSaveSignal("diapason.wav", diapason); */
+
+    pcmSignal p[13];
+    double fond_freq;
+    int i;
+
+    /* generate all 13 notes */
+    for (i=0; i<13; i++){
+        fond_freq = 220.0 * pow(2.0, i/12.0);
+        piano(&p[i], 44100, fond_freq, 29000.0);
+    } 
+    /* combine them */
+    for (i=1; i<13; i++){
+        addsignal(&p[0], &p[i], 0.5);
+    }
+    /* convert to wav */
+    wavSaveSignal("octave.wav", p[0]);
 
     return (EXIT_SUCCESS);
 }

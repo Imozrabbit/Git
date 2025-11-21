@@ -10,7 +10,7 @@ typedef struct
 
 /* Prototypes des fonctions */
 int generateSinus(
-    pcmSignal *signal,                /*pointeur vers structure pcm_signal*/
+    pcmSignal *signal,           /*pointeur vers structure pcm_signal*/
     unsigned int smplRate,       /*fréquence d'échantillonnage*/
     double duration,             /*durée*/
     double frequency,            /*fréquence*/
@@ -57,10 +57,23 @@ int somme(
         pcmSignal *s_2
         );
 
-int diaposon(
+int diapason(
         pcmSignal *final_signal_realistic,
         unsigned int smplRate,
         double tau,
         double frequency,
         double gain
+        );
+
+int piano(
+        pcmSignal *piano,
+        unsigned int samplingRate,
+        double fond_freq,
+        double gain
+        );
+
+int addsignal(
+        pcmSignal *dest,
+        pcmSignal *src,
+        double decalage
         );

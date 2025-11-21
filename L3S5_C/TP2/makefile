@@ -11,3 +11,4 @@ clean:
 	rm -f octave
 	rm -f test*
 	rm -f *.csv
+	rm -f *.wav
