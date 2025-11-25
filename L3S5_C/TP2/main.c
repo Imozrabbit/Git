@@ -35,12 +35,14 @@ int main(int argc, char *argv[])
     /* generate all 13 notes */
     for (i=0; i<13; i++){
         fond_freq = 220.0 * pow(2.0, i/12.0);
-        piano(&p[i], 44100, fond_freq, 29000.0);
+        piano(&p[i], 44100, fond_freq, 2500.0);
     } 
+
     /* combine them */
     for (i=1; i<13; i++){
         addsignal(&p[0], &p[i], 0.5);
     }
+
     /* convert to wav */
     wavSaveSignal("octave.wav", p[0]);
 

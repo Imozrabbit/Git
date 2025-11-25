@@ -300,12 +300,16 @@ int piano(
     generateExp(&harmonic_3_exp, samplingRate, 0.3);
     multiply_2signal(&note_3, &harmonic_3, &harmonic_3_exp);
 
+    pcmSignal sum1;
     pcmSignal sum;
-    somme(&sum, &note_1, &note_2);
-    somme(&sum, &sum, &note_3);
+    /* Do not use the same sum for those 2 functions, because the somme
+     * function malloc the sum.data, and if use it in both functions, it
+     * is going to be weird */
+    somme(&sum1, &note_1, &note_2);
+    somme(&sum, &sum1, &note_3);
 
     pcmSignal adsr;
-    generateADSR(&adsr, samplingRate, 0.02, 1.1, 0.01, 1.0, 0.1);
+    generateADSR(&adsr, samplingRate, 0.02, 0.6, 0.01, 1.0, 0.1);
 
     multiply_2signal(piano, &adsr, &sum);
     amp(piano, gain);
