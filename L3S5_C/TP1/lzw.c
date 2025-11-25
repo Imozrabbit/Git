@@ -1,236 +1,239 @@
 #include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
 #include <ctype.h>
+#include <string.h>
 #include "lzw.h"
 
-int main(int argc, string argv[]){
-/*Variables*/
-int i;
-int j;
-int n;
-int int_reponse;
-int code_ASCII;
-int fenetre_count;
-int counter;
-int max;
-int fenetre[2];
-unsigned int count[128][128];
-char input_filename[256];
-char output_filename[256];
-char dictionnaire_filename[256];
-int dico_nb[128][1];
-char dico[128][2];
-Reponse reponse;
-string extension_output;
-string extension_dictionnaire;
-FILE *input_file;
-FILE *output_file;
-FILE *dictionnaire;
+int main(int argc, char *argv[])
+{
+    /* Variables */
+    int i;
+    int j;
+    int k;
+    char input_filename[256];
+    char output_filename[256];
 
-/*Afficher le nom de l'exécutable*/
-printf("Executable path and name: %s\n", argv[0]);
-
-/*Afficher les paramètres*/
-for (i=1;i<=argc-1;i++){
-    printf(AFFICHAGE_PARAMETRES,i,argv[i]);
-}
-
-/*Si on a plus de 2 paramètres ou pas de paramètre*/
-if ((argc==1) || (argc>3)){
-    fprintf(stderr,SYNTAX_ERROR);
-    return(EXIT_FAILURE);
-}
-
-/*Mémoriser le premier paramètre*/
-strcpy(input_filename, argv[1]);
-
-/*Mémoriser le deuxième paramètre*/
-if(argc == 2){
-    /*S'il n'exist pas un deuxième paramètre, on prend le nom du premier paramètre*/
-    strcpy(output_filename, argv[1]);
-    extension_output = strrchr(output_filename, '.');
-    if (extension_output == NULL){
-        /*Cas de sans extension*/
-        strcat(output_filename, EXTENSION);
+    /* ------------------------------------------------------------------------------------------- */
+    /* check if there are 2 to 3 parameters */
+    if ((argc == 1) || (argc > 3)){
+        fprintf(stderr, ERROR_SYNTAXE);
+        return 1;
     }
-    else{
-        /*Cas avec extension, on le remplace par la bonne*/
-        strcpy(extension_output, EXTENSION);
-    }
-}
-else{
-    /*S'il y a un deuxième paramètre, on teste son extension*/
-    strcpy(output_filename, argv[2]);
-    extension_output = strrchr(output_filename, '.');
-    if (extension_output == NULL){
-        /*Cas de sans extension*/
-        strcat(output_filename, EXTENSION);
-    }
-    else{
-        /*Cas avec extension, on le remplace par la bonne*/
-        strcpy(extension_output, EXTENSION);
-    }
-}
 
-/*Afficher l'entrée et la sortie*/
-printf(AFFICHAGE_ENTREE_SORTIE, input_filename, output_filename);
-
-/*Ouvrir le fichier d'entrée*/
-input_file = fopen(argv[1], "rb");
-if (input_file == NULL){
-    /*Si le fichier n'existe pas*/
-    fprintf(stderr,AFFICHAGE_ERROR_OUVERTURE_FICHIER, argv[1]);
-    return(EXIT_FAILURE);
-}
-
-/*Réinitialiser le fichier de sortie*/
-output_file = fopen(output_filename,"r");
-if (output_file != NULL){
-    /*Si le fichier existe, on demande l'utilisateur ce qu'on fait ensuite*/
-    fclose(output_file);
-    while (1){
-        printf(MESSAGE_ECRASER);
-        int_reponse = fgetc(stdin); /*getchar outputs an interger*/
-        while((fgetc(stdin)) != '\n'); /*empty the input string to the last element which is new line*/
-        int_reponse = toupper((char)int_reponse); /*toupper also outputs an interger*/
-        reponse = (char)int_reponse;
-        /*while(fgetc(stdin)!=EOF);*/
-        if (reponse == 'Y'){
-            /*Cas où on écrase le fichier et crée un nouveau*/
-            output_file = fopen(output_filename,"wb");
-            printf("Overwritten completed\n");
-            break;
-        }
-        else if (reponse == 'N'){
-            /*cas où on fait rien et quitte*/
-            return(EXIT_FAILURE);
-            break;
+    /* register the input filename */
+    strcpy(input_filename, argv[1]);
+    
+    /* register the output filename */
+    if (argc == 2){
+        /* if there isn't a second parameter */
+        strcpy(output_filename, input_filename);
+        char *extension = strrchr(output_filename, '.');
+        if (extension == NULL){
+            /* no extension found */
+            strcat(output_filename, EXTENSION);
         }
         else{
-            /*cas où l'utilisateur tape n'importe quoi*/
-            printf("It is a yes or no question, Y for yes and n for no, choose accordingly.\n");
-    }
-    }
-}
-else{
-    /*Si le fichier n'existe pas, on le crée*/
-    output_file = fopen(output_filename,"wb");
-}
-
-/*Créer un dictionnaire en mode écriture*/
-strcpy(dictionnaire_filename, output_filename);
-extension_dictionnaire = strrchr(dictionnaire_filename, '.');
-strcpy(extension_dictionnaire,".CSV");
-dictionnaire = fopen(dictionnaire_filename, "w");
-
-/*Vérifier le fichier est de ASCII*/
-while((code_ASCII=fgetc(input_file)) != EOF){
-    if (code_ASCII > 127){
-        printf("This file is not formatted ASCII.");
-        return(EXIT_FAILURE);
-    }
-}
-
-/*Compter les couplets*/
-rewind(input_file);
-for (i=0;i<128;i++){ /*initialiser la tableau*/
-    for (j=0;j<128;j++){
-        count[i][j]=0;
-    }
-}
-fenetre_count = 0;
-/* Façon débile.*/
-while ((counter = fgetc(input_file)) != EOF){
-    if (fenetre_count < 2){
-        fenetre[fenetre_count] = counter;
-        fenetre_count++;
-    }
-    else{
-        count[fenetre[0]][fenetre[1]]++;
-        fenetre[0] = fenetre[1];
-        fenetre[1] = counter;
-    }
-}
-count[fenetre[0]][fenetre[1]]++;
-
-
-/*Enregistrer les top 128 couplets les plus utilisés*/
-for (i=0;i<128;i++){ /*initialiser la tableau*/
-    dico[i][0] = dico[i][1] = dico_nb[i][0] = 0;
-}
-
-/*Récupérer le max des couplets*/
-rewind(input_file);
-max = 0;
-int nb_colonne;
-int nb_ligne;
-for (i=0;i<128;i++){
-    for (j=0;j<128;j++){
-        if (count[i][j]>max){
-            max = count[i][j];
-            count[i][j] = 0;
-            dico[0][0] = (char)i;
-            dico[0][1] = (char)j;
-            dico_nb[0][0] = max;
-            nb_ligne = i;
-            nb_colonne = j;
+            /* extension found */
+            extension = EXTENSION;
         }
     }
-}
+    else{
+        /* if there are 2 parameters */
+        strcpy(output_filename, argv[2]);
+        char *extension = strrchr(output_filename, '.');
+        if (extension == NULL){
+            /* no extension found */
+            strcat(output_filename, EXTENSION);
+        }
+        else{
+            /* extension found */
+            extension = EXTENSION;
+        }
+    }
 
-unsigned int k;
-int index;
-for (index = 1;index < 128;index++){
-    int sec = 0;
+    printf("Name of the program is : %s\n", argv[0]);
+    printf("Parameter 1 : %s\n", argv[1]);
+    printf("Parameter 2 : %s\n", argv[2]);
+    printf("Input file name : %s\nOutput file name : %s\n", input_filename, output_filename);
+
+    /* ------------------------------------------------------------------------------------------- */
+    /* variables */
+    FILE *p_input_filename;
+    FILE *p_output_filename;
+    char dictionnaire[256];
+    FILE *p_dictionnaire;
+
+    /* check if input file exists*/
+    p_input_filename = fopen(input_filename, "rb");
+    if (p_input_filename == NULL){
+        fprintf(stderr, ERROR_FILE_OPEN);
+        return 1;
+    }
+
+    /* check if output file exists and try to open it */
+    p_output_filename = fopen(output_filename, "r");
+    if (p_output_filename != NULL){
+        /* if outpout file already there, ask user if overwrite it */
+        fclose(p_output_filename);
+        printf(IF_OVERWRITE);
+        char respond;
+        scanf("%c", &respond);
+        while( (fgetc(stdin)) != '\n' );
+        char Respond = (char) toupper( (int)respond );
+        if (Respond == 'N'){
+            /* No overwrite */
+            fclose(p_input_filename);
+            return 1;
+        }
+        else{
+            /* Yes overwrite */
+            p_output_filename = fopen(output_filename,"wb");
+        }
+    }
+    else{
+        /* if output file doesn't exist */
+        p_output_filename = fopen(output_filename,"wb");
+    }
+
+    /* create a file named dictionnaire in writing mode */
+    strcpy(dictionnaire, output_filename);
+    char *csv = strrchr(dictionnaire, '.');
+    strcpy(csv, ".csv");
+    p_dictionnaire = fopen(dictionnaire,"w");
+
+
+    /* ------------------------------------------------------------------------------------------- */
+    /*check if file is of format ASCII */
+    int ascii;
+    while ( (ascii = fgetc(p_input_filename)) != EOF ){
+        if (ascii > 127){
+            fprintf(stderr, "File is not of ASCII format.\n");
+            return 1;
+        }
+    }
+    /* Analyse the file */
+    int count[128][128];
     for (i=0;i<128;i++){
+        /*initialize the table*/
         for (j=0;j<128;j++){
-            k = count[i][j];
-            if ((k < max)&&(k > sec)){
-                sec = k;
-                nb_ligne = i;
-                nb_colonne = j;
+            count[i][j] = 0;
+        }
+    }
+    rewind(p_input_filename);
+    /* first 2 chars */
+    int first_case = fgetc(p_input_filename);
+    if (first_case == EOF){
+        /*if the input file has nothing */
+        fprintf(stderr, "The input file has no data.\n");
+    }
+    int second_case = fgetc(p_input_filename);
+    if (second_case == EOF){
+        /*if the input file has only 1 character */
+        fprintf(stderr, "The input file has only 1 character.\n");
+    }
+    count[first_case][second_case] += 1;
+    while (1){
+        /* rotation */
+        first_case = second_case;
+        second_case = fgetc(p_input_filename);
+        if (second_case == EOF){
+            break;
+        }
+        count[first_case][second_case] += 1;
+    }
+    /* 128 most frequent couplets */
+    char dico[128][2];
+    int dico_num[128][1];
+    int max = 0;
+    int picked_index = -1;
+    int max_i_num;
+    int max_j_num;
+    
+    for (k=0;k<128;k++){
+        for (i=0;i<128;i++){
+            for (j=0;j<128;j++){
+                if (count[i][j] > max){
+                    max = count[i][j];
+                    max_i_num = i;
+                    max_j_num = j;
+                }
+            }
+        }
+        dico[k][0] = (char)max_i_num;
+        dico[k][1] = (char)max_j_num;
+        dico_num[k][0] = max;
+        count[max_i_num][max_j_num] = picked_index;
+        picked_index --;
+        max = 0;
+    }
+
+    /* write in csv file */
+    for (i=0;i<128;i++){
+        fprintf(p_dictionnaire,"%c%c : %d\n", dico[i][0], dico[i][1], dico_num[i][0]);
+    }
+
+
+    /* ------------------------------------------------------------------------------------------- */
+    char *compressed = "Lorem_Ipsum.lzw";
+    FILE *p_compressed;
+    /* Check if can open the compressed file */
+    p_compressed = fopen(compressed,"wb");
+    if (p_compressed == NULL){
+        fprintf(stderr, ERROR_FILE_OPEN);
+        return 1;
+    }
+
+    /* write the input file name as header ending with a ASCII 0*/
+    fprintf(p_compressed,"%s",input_filename);
+    fputc('\0', p_compressed);
+
+    /* write dico[128][2] */
+    for (i=0;i<128;i++){
+        fprintf(p_compressed,"%c%c", dico[i][0],dico[i][1]);
+    }
+
+    /* rescan the input file */
+    rewind(p_input_filename);
+    int tampon_1;
+    int tampon_2;
+    tampon_1 = fgetc(p_input_filename);
+    tampon_2 = fgetc(p_input_filename);
+    while (1){
+        if (count[tampon_1][tampon_2] < 0){
+            fprintf(p_compressed, "%c", (char)((-count[tampon_1][tampon_2]-1)+128));
+            tampon_1 = fgetc(p_input_filename);
+            if (tampon_1 == EOF){
+                break;
+            }
+            tampon_2 = fgetc(p_input_filename);
+            if (tampon_2 == EOF){
+                break;
+            }
+        }
+        else{
+            fprintf(p_compressed,"%c", tampon_1);
+            tampon_1 = tampon_2;
+            tampon_2 = fgetc(p_input_filename);
+            if (tampon_2 == EOF){
+                break;
             }
         }
     }
-    dico_nb[index][0] = sec;
-    max = sec;
-    dico[index][0] = (char)nb_ligne;
-    dico[index][1] = (char)nb_colonne;
-}
 
-/*Exporter les données vers la dictionnaire*/
-for (n=0;n<128;n++){
-    fprintf(dictionnaire,"\"%c%c\"; %i\n", 
-            iscntrl(dico[n][0])?' ':dico[n][0], 
-            iscntrl(dico[n][1])?'w':dico[n][1],
-            dico_nb[n][0]);
-}
+    /* Seek and tell the size of the original file and the compressed one */
+    rewind(p_input_filename);
+    rewind(p_compressed);
+    fseek(p_input_filename,0,SEEK_END);
+    fseek(p_compressed, 0, SEEK_END);
+    unsigned int size_original = ftell(p_input_filename);
+    unsigned int size_compressed = ftell(p_compressed);
+    printf("The ratio is %.2lf %%\n", ((double)size_compressed)/((double)size_original)*100 );
 
-/*Generation de nom du fichier d'orgine*/
-char *original_filename = "pico\0";
-
-#if 0
-for (n=0;n<128;n++){
-    fprintf(dico,"\"%c%c\"\n", 
-            iscntrl(dico[n][0])?' ':dico[n][0], 
-            iscntrl(dico[n][2])?'w':dico[n][1]);
-}
-
-/**/
-int prev;
-int curr;
-if ((prev = fgetc(input_file)) != EOF){
-    while ((curr = fgetc(input_file)) != EOF){
-        count[prev][curr]++;
-        prev = curr;
-    }
-}
-#endif
-
-/*Fin de programme*/
-fclose(input_file);
-fclose(output_file);
-fclose(dictionnaire);
-return(EXIT_SUCCESS);
+    
+    /* ------------------------------------------------------------------------------------------- */
+    /* close all files */
+    fclose(p_output_filename);
+    fclose(p_input_filename);
+    fclose(p_dictionnaire);
+    fclose(p_compressed);
+    return 0;
 }

@@ -1,0 +1,2 @@
+#define ERROR_SYNTAX "SYNTAX : NAME_PROGRAM FILE_TO_DECOMPRESS DECOMPRESSED_FILENAME\n"
+#define ERROR_FILE_OPEN "Sorry have trouble open that file\n"
