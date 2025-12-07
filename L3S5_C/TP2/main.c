@@ -21,12 +21,12 @@ int main(int argc, char *argv[])
 
     pcmSignal multiplied_of_2;
     multiply_2signal(&multiplied_of_2, &mySinus, &env_exp);
-    csvSaveSignal("multiplied_of_2.csv", multiplied_of_2);
+    csvSaveSignal("multiplied_of_2.csv", multiplied_of_2); */
 
-    pcmSignal diapason;
-    diapason(&diapason, 44100, 1.0, 440.0, 29000.0);
-    csvSaveSignal("diapason.csv", diapason); 
-    wavSaveSignal("diapason.wav", diapason); */
+    pcmSignal diapa;
+    diapason(&diapa, 44100, 1.0, 440.0, 29000.0);
+    csvSaveSignal("diapason.csv", diapa); 
+    wavSaveSignal("diapason.wav", diapa);
 
     pcmSignal p[13];
     double fond_freq;
